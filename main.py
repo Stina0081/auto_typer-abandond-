@@ -1,93 +1,85 @@
-import pyautogui
 import tkinter as tk
-import threading
 import time
 import keyboard
+import threading
 
-bot_running = False
-selected_hotkey = ""
-message = ""
-interval = 0
+class AutoMessageBot:
+    def __init__(self, interval):
+        self.interval = interval
+        self.message = "Default message"
+        self.key = None
+        self.running = False
 
-def send_message():
-    pyautogui.typewrite(message)
-    pyautogui.press('enter')
+    def set_message(self, message):
+        self.message = message
 
-def start_bot():
-    global bot_running
-    while bot_running:
-        send_message()
-        time.sleep(interval)
+    def set_key(self, key):
+        self.key = key
 
-def start_thread():
-    global bot_running
-    if not bot_running:
-        bot_running = True
-        thread = threading.Thread(target=start_bot)
-        thread.start()
+    def toggle_running(self):
+        self.running = not self.running
+        if self.running:
+            self.start_auto_message()
+        else:
+            self.stop_auto_message()
 
-def stop_bot():
-    global bot_running
-    bot_running = False
+    def start_auto_message(self):
+        t = threading.Thread(target=self.auto_message_thread)
+        t.start()
 
-def toggle_bot():
-    global bot_running
-    if bot_running:
-        stop_bot()
-    else:
-        start_thread()
+    def auto_message_thread(self):
+        while self.running:
+            time.sleep(self.interval)
+            if self.key and keyboard.is_pressed(self.key):
+                print(self.message)
 
-def update_hotkey():
-    global selected_hotkey
-    hotkey_entry.delete(0, tk.END)
-    hotkey_entry.insert(0, "Press any key...")
-    hotkey_button.configure(state=tk.DISABLED)
-    keyboard.on_press(update_hotkey_listener)
+    def stop_auto_message(self):
+        self.running = False
 
-def update_hotkey_listener(event):
-    global selected_hotkey
-    selected_hotkey = event.name
-    hotkey_entry.delete(0, tk.END)
-    hotkey_entry.insert(0, selected_hotkey)
-    hotkey_button.configure(state=tk.NORMAL)
-    keyboard.unhook(update_hotkey_listener)
 
-def update_message(event):
-    global message
-    message = message_entry.get()
-
-def update_interval(event):
-    global interval
-    interval = int(interval_entry.get())
+bot = AutoMessageBot(1)
 
 
 window = tk.Tk()
-window.title("Python Bot")
-window.geometry("300x250")
+window.title("Auto Message Bot")
 
 
 message_label = tk.Label(window, text="Message:")
 message_label.pack()
 message_entry = tk.Entry(window)
 message_entry.pack()
-message_entry.bind('<FocusOut>', update_message)
+
+
+key_label = tk.Label(window, text="Key:")
+key_label.pack()
+key_var = tk.StringVar(window)
+key_var.set("None")
+key_option_menu = tk.OptionMenu(window, key_var, "None", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12")
+key_option_menu.pack()
+
 
 interval_label = tk.Label(window, text="Interval (seconds):")
 interval_label.pack()
-interval_entry = tk.Entry(window)
-interval_entry.pack()
-interval_entry.bind('<FocusOut>', update_interval)
+interval_var = tk.StringVar(window)
+interval_var.set("1")
+interval_option_menu = tk.OptionMenu(window, interval_var, "1", "2", "3", "4", "5", "6", "7", "8", "9", "10")
+interval_option_menu.pack()
 
-hotkey_label = tk.Label(window, text="Hotkey:")
-hotkey_label.pack()
-hotkey_entry = tk.Entry(window)
-hotkey_entry.pack()
 
-start_button = tk.Button(window, text="Start", command=toggle_bot)
-start_button.pack()
+toggle_button = tk.Button(window, text="Start", command=bot.toggle_running)
+toggle_button.pack()
 
-hotkey_button = tk.Button(window, text="Select Hotkey", command=update_hotkey)
-hotkey_button.pack()
+
+def update_bot_settings():
+    bot.set_message(message_entry.get())
+    selected_key = key_var.get()
+    bot.set_key(selected_key if selected_key != "None" else None)
+    bot.interval = int(interval_var.get())
+
+
+message_entry.bind("<KeyRelease>", lambda event: update_bot_settings())
+key_var.trace("w", lambda *args: update_bot_settings())
+interval_var.trace("w", lambda *args: update_bot_settings())
 
 
 window.mainloop()
